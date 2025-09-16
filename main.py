@@ -104,18 +104,7 @@ class AssetManager:
         except pygame.error as e:
             print(f"Aviso: Não foi possível carregar alguns sons. O jogo funcionará sem eles. Erro: {e}")
     def load_audio(self):
-        # CRIAMOS ESTE NOVO MÉTODO COM TODO O CÓDIGO DE ÁUDIO
-        try:
-            pygame.mixer.music.load('assets/music/music.ogg')
-            pygame.mixer.music.set_volume(0.3)
-            self.sounds['click'] = pygame.mixer.Sound('assets/sfx/click.wav')
-            self.sounds['interact'] = pygame.mixer.Sound('assets/sfx/interact.wav')
-            self.sounds['correct'] = pygame.mixer.Sound('assets/sfx/correct.wav')
-            self.sounds['wrong'] = pygame.mixer.Sound('assets/sfx/wrong.wav')
-            self.sounds['level_up'] = pygame.mixer.Sound('assets/sfx/level_up.wav')
-            print("Áudio carregado com sucesso!")
-        except pygame.error as e:
-            print(f"Aviso: Não foi possível carregar alguns sons. O jogo funcionará sem eles. Erro: {e}")
+        pass
 # =============================================================================
 # --- CLASSES DO JOGO ---
 # =============================================================================
@@ -326,20 +315,6 @@ class IntroState(GameState):
     def handle_events(self, events):
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN:
-                # 1. INICIALIZA O SISTEMA DE ÁUDIO
-                if not pygame.mixer.get_init():
-                    pygame.mixer.init()
-                    # 2. CARREGA TODOS OS SONS E MÚSICA
-                    self.game.assets.load_audio()
-
-                # 3. TOCA A MÚSICA DE FUNDO
-                if pygame.mixer.get_init() and not pygame.mixer.music.get_busy():
-                    try:
-                        pygame.mixer.music.play(-1)
-                    except pygame.error:
-                        print("Não foi possível tocar a música...")
-
-                # 4. FINALMENTE, MUDA PARA A TELA DO JOGO
                 self.game.change_state(PlayingState)
     def update(self):
         if self.fade_in:
