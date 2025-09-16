@@ -96,8 +96,6 @@ class AssetManager:
             sys.exit()
 
         try:
-            pygame.mixer.music.load('assets/music/music.ogg')
-            pygame.mixer.music.set_volume(0.3)
             self.sounds['click'] = pygame.mixer.Sound('assets/sfx/click.wav')
             self.sounds['interact'] = pygame.mixer.Sound('assets/sfx/interact.wav')
             self.sounds['correct'] = pygame.mixer.Sound('assets/sfx/correct.wav')
@@ -105,7 +103,19 @@ class AssetManager:
             self.sounds['level_up'] = pygame.mixer.Sound('assets/sfx/level_up.wav')
         except pygame.error as e:
             print(f"Aviso: Não foi possível carregar alguns sons. O jogo funcionará sem eles. Erro: {e}")
-
+    def load_audio(self):
+        # CRIAMOS ESTE NOVO MÉTODO COM TODO O CÓDIGO DE ÁUDIO
+        try:
+            pygame.mixer.music.load('assets/music/music.ogg')
+            pygame.mixer.music.set_volume(0.3)
+            self.sounds['click'] = pygame.mixer.Sound('assets/sfx/click.wav')
+            self.sounds['interact'] = pygame.mixer.Sound('assets/sfx/interact.wav')
+            self.sounds['correct'] = pygame.mixer.Sound('assets/sfx/correct.wav')
+            self.sounds['wrong'] = pygame.mixer.Sound('assets/sfx/wrong.wav')
+            self.sounds['level_up'] = pygame.mixer.Sound('assets/sfx/level_up.wav')
+            print("Áudio carregado com sucesso!")
+        except pygame.error as e:
+            print(f"Aviso: Não foi possível carregar alguns sons. O jogo funcionará sem eles. Erro: {e}")
 # =============================================================================
 # --- CLASSES DO JOGO ---
 # =============================================================================
@@ -316,14 +326,21 @@ class IntroState(GameState):
     def handle_events(self, events):
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN:
-                # TOCA A MÚSICA APENAS QUANDO O USUÁRIO CLICA
+                # 1. INICIALIZA O SISTEMA DE ÁUDIO
+                if not pygame.mixer.get_init():
+                    pygame.mixer.init()
+                    # 2. CARREGA TODOS OS SONS E MÚSICA
+                    self.game.assets.load_audio()
+
+                # 3. TOCA A MÚSICA DE FUNDO
                 if pygame.mixer.get_init() and not pygame.mixer.music.get_busy():
                     try:
                         pygame.mixer.music.play(-1)
                     except pygame.error:
                         print("Não foi possível tocar a música...")
-                self.game.change_state(PlayingState)
 
+                # 4. FINALMENTE, MUDA PARA A TELA DO JOGO
+                self.game.change_state(PlayingState)
     def update(self):
         if self.fade_in:
             self.text_alpha = min(255, self.text_alpha + 3)
@@ -540,7 +557,6 @@ class AnniversaryState(GameState):
 class Game:
     def __init__(self):
         pygame.init()
-        pygame.mixer.init()
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption(GAME_TITLE)
         self.clock = pygame.time.Clock()
