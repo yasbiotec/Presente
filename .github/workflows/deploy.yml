@@ -25,9 +25,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install pygbag
 
-    - name: Build the game for web
+    - name: Build the game for web (build only)
       run: |
-        pygbag main.py
+        pygbag --build main.py
 
     - name: Setup Pages
       uses: actions/configure-pages@v5
