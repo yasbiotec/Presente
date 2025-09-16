@@ -1,3 +1,0 @@
-"# Presente" 
-"# Presente" 
-"# Presente" 

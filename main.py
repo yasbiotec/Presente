@@ -1,4 +1,4 @@
-# CÓDIGO FINAL CORRIGIDO E ORGANIZADO (PRONTO PARA WEB)
+# CÓDIGO FINAL CORRIGIDO E ORGANIZADO (PRONTO PARA PYINSTALLER E DESENVOLVIMENTO)
 import pygame
 import sys
 import random
@@ -6,6 +6,19 @@ import textwrap
 import json
 import os
 import asyncio
+
+# =============================================================================
+# --- FUNÇÃO PARA ENCONTRAR ARQUIVOS (PARA O PYINSTALLER) ---
+# =============================================================================
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 # =============================================================================
 # --- CONSTANTES E CONFIGURAÇÕES DO JOGO ---
@@ -73,49 +86,45 @@ class AssetManager:
         self.load_assets()
 
     def load_assets(self):
+        # Carrega fontes e imagens
         try:
-            self.fonts['medium'] = pygame.font.Font('assets/font/font.ttf', 22)
-            self.fonts['large'] = pygame.font.Font('assets/font/font.ttf', 30)
-            self.fonts['popup'] = pygame.font.Font('assets/font/font.ttf', 72)
+            self.fonts['medium'] = pygame.font.Font(resource_path('assets/font/font.ttf'), 22)
+            self.fonts['large'] = pygame.font.Font(resource_path('assets/font/font.ttf'), 30)
+            self.fonts['popup'] = pygame.font.Font(resource_path('assets/font/font.ttf'), 72)
         except pygame.error:
             print("Aviso: Fonte personalizada não encontrada. Usando fontes padrão.")
+            # CORREÇÃO: Não se usa resource_path(None), pois None não é um arquivo.
             self.fonts['medium'] = pygame.font.Font(None, 28)
             self.fonts['large'] = pygame.font.Font(None, 36)
             self.fonts['popup'] = pygame.font.Font(None, 80)
 
         try:
-            self.images['spritesheet'] = pygame.image.load('assets/images/265627.png').convert_alpha()
-            self.images['background'] = pygame.image.load('assets/images/background.png').convert()
+            # MUDANÇA: Aplicado resource_path para todas as imagens
+            self.images['spritesheet'] = pygame.image.load(resource_path('assets/images/265627.png')).convert_alpha()
+            self.images['background'] = pygame.image.load(resource_path('assets/images/background.png')).convert()
             self.images['background'] = pygame.transform.scale(self.images['background'], (SCREEN_WIDTH, SCREEN_HEIGHT))
-            self.images['final_photo'] = pygame.image.load('assets/images/nossa_foto.png').convert()
-            self.images['final_photo'] = pygame.transform.scale(self.images['final_photo'],
-                                                                (SCREEN_WIDTH, SCREEN_HEIGHT))
-            self.images['food_spritesheet'] = pygame.image.load('assets/images/comidas.png').convert_alpha()
+            self.images['final_photo'] = pygame.image.load(resource_path('assets/images/nossa_foto.png')).convert()
+            self.images['final_photo'] = pygame.transform.scale(self.images['final_photo'], (SCREEN_WIDTH, SCREEN_HEIGHT))
+            self.images['food_spritesheet'] = pygame.image.load(resource_path('assets/images/comidas.png')).convert_alpha()
         except pygame.error as e:
             print(f"Erro ao carregar imagem: {e}. Verifique se os arquivos estão na pasta 'assets/images'.")
             sys.exit()
 
-        try:
-            self.sounds['click'] = pygame.mixer.Sound('assets/sfx/click.wav')
-            self.sounds['interact'] = pygame.mixer.Sound('assets/sfx/interact.wav')
-            self.sounds['correct'] = pygame.mixer.Sound('assets/sfx/correct.wav')
-            self.sounds['wrong'] = pygame.mixer.Sound('assets/sfx/wrong.wav')
-            self.sounds['level_up'] = pygame.mixer.Sound('assets/sfx/level_up.wav')
-        except pygame.error as e:
-            print(f"Aviso: Não foi possível carregar alguns sons. O jogo funcionará sem eles. Erro: {e}")
     def load_audio(self):
-        # CRIAMOS ESTE NOVO MÉTODO COM TODO O CÓDIGO DE ÁUDIO
+        # Carrega todos os sons e música
         try:
-            pygame.mixer.music.load('assets/music/music.ogg')
+            # MUDANÇA: Aplicado resource_path para todos os áudios
+            pygame.mixer.music.load(resource_path('assets/music/music.ogg'))
             pygame.mixer.music.set_volume(0.3)
-            self.sounds['click'] = pygame.mixer.Sound('assets/sfx/click.wav')
-            self.sounds['interact'] = pygame.mixer.Sound('assets/sfx/interact.wav')
-            self.sounds['correct'] = pygame.mixer.Sound('assets/sfx/correct.wav')
-            self.sounds['wrong'] = pygame.mixer.Sound('assets/sfx/wrong.wav')
-            self.sounds['level_up'] = pygame.mixer.Sound('assets/sfx/level_up.wav')
+            self.sounds['click'] = pygame.mixer.Sound(resource_path('assets/sfx/click.wav'))
+            self.sounds['interact'] = pygame.mixer.Sound(resource_path('assets/sfx/interact.wav'))
+            self.sounds['correct'] = pygame.mixer.Sound(resource_path('assets/sfx/correct.wav'))
+            self.sounds['wrong'] = pygame.mixer.Sound(resource_path('assets/sfx/wrong.wav'))
+            self.sounds['level_up'] = pygame.mixer.Sound(resource_path('assets/sfx/level_up.wav'))
             print("Áudio carregado com sucesso!")
         except pygame.error as e:
             print(f"Aviso: Não foi possível carregar alguns sons. O jogo funcionará sem eles. Erro: {e}")
+
 # =============================================================================
 # --- CLASSES DO JOGO ---
 # =============================================================================
@@ -131,7 +140,6 @@ class SpriteSheet:
         image.blit(self.sheet, (0, 0), source_rect)
         image = pygame.transform.scale(image, (int(self.grid_width * scale), int(self.grid_height * scale)))
         return image
-
 
 class Raposinha(pygame.sprite.Sprite):
     def __init__(self, assets):
@@ -326,6 +334,7 @@ class IntroState(GameState):
     def handle_events(self, events):
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN:
+                # MUDANÇA: Lógica de inicialização de áudio movida para cá
                 # 1. INICIALIZA O SISTEMA DE ÁUDIO
                 if not pygame.mixer.get_init():
                     pygame.mixer.init()
@@ -341,6 +350,7 @@ class IntroState(GameState):
 
                 # 4. FINALMENTE, MUDA PARA A TELA DO JOGO
                 self.game.change_state(PlayingState)
+
     def update(self):
         if self.fade_in:
             self.text_alpha = min(255, self.text_alpha + 3)
@@ -360,11 +370,9 @@ class PlayingState(GameState):
         super().__init__(game)
         self.maya = self.game.maya
         self.buttons = [
-            Button(20, SCREEN_HEIGHT - 70, 140, 50, "Carinho", COLORS['purple'], COLORS['purple_hover'],
-                   self.game.assets),
+            Button(20, SCREEN_HEIGHT - 70, 140, 50, "Carinho", COLORS['purple'], COLORS['purple_hover'], self.game.assets),
             Button(180, SCREEN_HEIGHT - 70, 140, 50, "Quiz", COLORS['blue'], COLORS['blue_hover'], self.game.assets),
-            Button(340, SCREEN_HEIGHT - 70, 140, 50, "Alimentar", COLORS['green'], COLORS['green_hover'],
-                   self.game.assets)
+            Button(340, SCREEN_HEIGHT - 70, 140, 50, "Alimentar", COLORS['green'], COLORS['green_hover'], self.game.assets)
         ]
         self.popup_message = None
         self.label_fome = self.game.assets.fonts['medium'].render("Fome:", True, COLORS['text'])
@@ -424,8 +432,7 @@ class PlayingState(GameState):
     def draw_ui(self, screen):
         self.draw_status_bar(screen, 10, 10, self.label_fome, self.maya.fome, 10, COLORS['red'])
         self.draw_status_bar(screen, 10, 50, self.label_felicidade, self.maya.felicidade, 10, COLORS['blue'])
-        self.draw_status_bar(screen, 10, 90, self.label_xp, self.maya.xp, self.maya.xp_to_next_level,
-                             COLORS['xp_color'])
+        self.draw_status_bar(screen, 10, 90, self.label_xp, self.maya.xp, self.maya.xp_to_next_level, COLORS['xp_color'])
         screen.blit(self.level_surf, (SCREEN_WIDTH - self.level_surf.get_width() - 20, 20))
         for button in self.buttons: button.draw(screen)
 
@@ -495,8 +502,7 @@ class QuizState(GameState):
         for i, opt in enumerate(self.options):
             y = start_y + i * (btn_h + pad)
             self.buttons.append(
-                Button(SCREEN_WIDTH // 2 - btn_w // 2, y, btn_w, btn_h, opt, COLORS['blue'], COLORS['purple'],
-                       self.game.assets))
+                Button(SCREEN_WIDTH // 2 - btn_w // 2, y, btn_w, btn_h, opt, COLORS['blue'], COLORS['purple'], self.game.assets))
 
     def process_answer(self, chosen_index):
         self.feedback_timer = pygame.time.get_ticks()
@@ -557,6 +563,7 @@ class AnniversaryState(GameState):
 class Game:
     def __init__(self):
         pygame.init()
+        # MUDANÇA: mixer.init() removido daqui
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption(GAME_TITLE)
         self.clock = pygame.time.Clock()
@@ -564,13 +571,6 @@ class Game:
         self.maya = Raposinha(self.assets)
         self.load_game()
         self.state_manager = IntroState(self)
-        # <-- MUDANÇA: ADICIONE ESTAS DUAS LINHAS AQUI
-        try:
-            icon_surface = pygame.image.load("icon.png")
-            pygame.display.set_icon(icon_surface)
-        except pygame.error as e:
-            print(f"Não foi possível carregar o ícone: {e}")
-
     def change_state(self, new_state_class, **kwargs):
         new_state = new_state_class(self)
         self.state_manager = new_state
@@ -593,6 +593,7 @@ class Game:
                 print("Arquivo de save corrompido. Começando um novo jogo.")
 
     def run(self):
+        # MUDANÇA: Bloco de tocar música removido daqui
         is_running = True
         while is_running:
             events = pygame.event.get()
@@ -616,4 +617,6 @@ async def main():
     game.run()
 
 if __name__ == '__main__':
+    # Mantém o asyncio para compatibilidade com a versão web (pygbag)
+    # Para rodar localmente, o asyncio não interfere
     asyncio.run(main())
