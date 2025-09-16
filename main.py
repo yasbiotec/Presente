@@ -316,6 +316,12 @@ class IntroState(GameState):
     def handle_events(self, events):
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN:
+                # TOCA A MÚSICA APENAS QUANDO O USUÁRIO CLICA
+                if pygame.mixer.get_init() and not pygame.mixer.music.get_busy():
+                    try:
+                        pygame.mixer.music.play(-1)
+                    except pygame.error:
+                        print("Não foi possível tocar a música...")
                 self.game.change_state(PlayingState)
 
     def update(self):
@@ -571,12 +577,6 @@ class Game:
                 print("Arquivo de save corrompido. Começando um novo jogo.")
 
     def run(self):
-        if pygame.mixer.get_init():
-            try:
-                if not pygame.mixer.music.get_busy():
-                    pygame.mixer.music.play(-1)
-            except pygame.error:
-                print("Não foi possível tocar a música, arquivo pode estar faltando ou ser inválido.")
         is_running = True
         while is_running:
             events = pygame.event.get()
