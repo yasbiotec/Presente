@@ -1,105 +1,82 @@
-# CÓDIGO FINAL CORRIGIDO E ORGANIZADO (PRONTO PARA PYINSTALLER E DESENVOLVIMENTO)
 import pygame
-import sys
-import random
-import textwrap
+import asyncio
 import json
 import os
-import asyncio
+import random
+import sys
+import textwrap
 
-# =============================================================================
-# --- FUNÇÃO PARA ENCONTRAR ARQUIVOS (PARA O PYINSTALLER) ---
-# =============================================================================
+# Função auxiliar para encontrar o caminho correto dos arquivos (essencial para PyInstaller)
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
     try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        # PyInstaller cria uma pasta temporária e armazena o caminho em _MEIPASS
         base_path = sys._MEIPASS
     except Exception:
         base_path = os.path.abspath(".")
-
     return os.path.join(base_path, relative_path)
 
-# =============================================================================
-# --- CONSTANTES E CONFIGURAÇÕES DO JOGO ---
-# =============================================================================
-# Janela
+# --- Constantes e Configurações Globais ---
 SCREEN_WIDTH, SCREEN_HEIGHT = 500, 500
 GAME_TITLE = "Maya - A raposinha"
 FPS = 60
 SAVE_FILE = "savegame.json"
 
-# Cores
 COLORS = {
     "white": (255, 255, 255), "black": (0, 0, 0), "text": (80, 80, 80),
-    "green": (40, 180, 99), "green_hover": (50, 200, 110),
-    "red": (231, 76, 60),
-    "blue": (52, 152, 219), "blue_hover": (72, 172, 239),
-    "purple": (142, 68, 173), "purple_hover": (162, 88, 193),
-    "xp_color": (250, 215, 70), "background": (253, 226, 232),
-    "bubble_bg": (255, 255, 255), "bubble_border": (180, 180, 180),
-    "final_message_bg": (220, 20, 60), "correct_answer": (46, 204, 113), "incorrect_answer": (192, 57, 43)
+    "green": (40, 180, 99), "green_hover": (50, 200, 110), "red": (231, 76, 60),
+    "blue": (52, 152, 219), "blue_hover": (72, 172, 239), "purple": (142, 68, 173),
+    "purple_hover": (162, 88, 193), "xp_color": (250, 215, 70), "background": (253, 226, 232),
+    "bubble_bg": (255, 255, 255), "bubble_border": (180, 180, 180), "final_message_bg": (220, 20, 60),
+    "correct_answer": (46, 204, 113), "incorrect_answer": (192, 57, 43)
 }
 
-# Configurações do Pet e do Jogo
 PET_ANIMATION_SPEED = 200
 STAT_DECAY_INTERVAL = 7000
 PHRASE_INTERVAL = 5000
 XP_PER_LEVEL = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]
 PHRASES = [
-    "Foi amor ao primeiro grito?",
-    "Estou com um pouquinho de fome...", "Vamos no café do harry potter denovo...",
-    "Quero um café das Letras!!", "Zzz... que soninho bom...", "Por que você não deixa a Yas te morder ?",
+    "Foi amor ao primeiro grito?", "Estou com um pouquinho de fome...",
+    "Vamos no café do harry potter denovo...", "Quero um café das Letras!!",
+    "Zzz... que soninho bom...", "Por que você não deixa a Yas te morder ?",
     "Qual a sua cor favorita?", "Corte o bolo de casamento com uma espada!",
     "Ela ama seus presentes, de a ela um labubu!", "Me dê presentes! muitos!!!"
 ]
 QUIZ_DATA = [
-    {"pergunta": "Onde foi o primeiro encontro de vocês?",
-     "opcoes": ["Café das Letras", "Festa de Haloween", "Parque", "Café do Harry Potter"], "correta": 3},
-    {"pergunta": "Qual o nome do primeiro filho que vocês tiveram ?",
-     "opcoes": ["Galactos", "Squirtle", "Maya", "Hermes"], "correta": 2},
-    {"pergunta": "Qual a comida favorita da Yas para pedir no delivery?",
-     "opcoes": ["Pizza", "Hambúrguer", "Sushi", "Comida Mexicana", "Xis"], "correta": 1},
-    {"pergunta": "Qual foi o primeiro apelido que ela deu para você",
-     "opcoes": ["Squirtle", "Vida", "Mari", "Cacau Show"], "correta": 0},
-    {"pergunta": "Qual foi o primeiro presente que você deu a ela ? ",
-     "opcoes": ["Bottom Harry Potter", "Café das Letras", "Chocolate", "Bumbum"], "correta": 0}
+    {"pergunta": "Onde foi o primeiro encontro de vocês?", "opcoes": ["Café das Letras", "Festa de Haloween", "Parque", "Café do Harry Potter"], "correta": 3},
+    {"pergunta": "Qual o nome do primeiro filho que vocês tiveram ?", "opcoes": ["Galactos", "Squirtle", "Maya", "Hermes"], "correta": 2},
+    {"pergunta": "Qual a comida favorita da Yas para pedir no delivery?", "opcoes": ["Pizza", "Hambúrguer", "Sushi", "Comida Mexicana", "Xis"], "correta": 1},
+    {"pergunta": "Qual foi o primeiro apelido que ela deu para você", "opcoes": ["Squirtle", "Vida", "Mari", "Cacau Show"], "correta": 0},
+    {"pergunta": "Qual foi o primeiro presente que você deu a ela ? ", "opcoes": ["Bottom Harry Potter", "Café das Letras", "Chocolate", "Bumbum"], "correta": 0}
 ]
 
-# =============================================================================
-# --- FUNÇÕES AUXILIARES ---
-# =============================================================================
+# --- Funções e Classes do Jogo ---
+
 def draw_heart_shape(screen, color, pos, size):
     s = size
     pygame.draw.circle(screen, color, (pos[0] - s // 2, pos[1]), s // 2)
     pygame.draw.circle(screen, color, (pos[0] + s // 2, pos[1]), s // 2)
     pygame.draw.polygon(screen, color, [(pos[0] - s, pos[1]), (pos[0] + s, pos[1]), (pos[0], pos[1] + s)])
 
-# =============================================================================
-# --- GERENCIADOR DE RECURSOS (ASSET MANAGER) ---
-# =============================================================================
 class AssetManager:
     def __init__(self):
         self.fonts = {}
         self.images = {}
         self.sounds = {}
-        self.load_assets()
+        self.load_visual_assets()
 
-    def load_assets(self):
-        # Carrega fontes e imagens
+    def load_visual_assets(self):
         try:
             self.fonts['medium'] = pygame.font.Font(resource_path('assets/font/font.ttf'), 22)
             self.fonts['large'] = pygame.font.Font(resource_path('assets/font/font.ttf'), 30)
             self.fonts['popup'] = pygame.font.Font(resource_path('assets/font/font.ttf'), 72)
         except pygame.error:
             print("Aviso: Fonte personalizada não encontrada. Usando fontes padrão.")
-            # CORREÇÃO: Não se usa resource_path(None), pois None não é um arquivo.
             self.fonts['medium'] = pygame.font.Font(None, 28)
             self.fonts['large'] = pygame.font.Font(None, 36)
             self.fonts['popup'] = pygame.font.Font(None, 80)
 
         try:
-            # MUDANÇA: Aplicado resource_path para todas as imagens
             self.images['spritesheet'] = pygame.image.load(resource_path('assets/images/265627.png')).convert_alpha()
             self.images['background'] = pygame.image.load(resource_path('assets/images/background.png')).convert()
             self.images['background'] = pygame.transform.scale(self.images['background'], (SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -110,10 +87,8 @@ class AssetManager:
             print(f"Erro ao carregar imagem: {e}. Verifique se os arquivos estão na pasta 'assets/images'.")
             sys.exit()
 
-    def load_audio(self):
-        # Carrega todos os sons e música
+    def load_audio_assets(self):
         try:
-            # MUDANÇA: Aplicado resource_path para todos os áudios
             pygame.mixer.music.load(resource_path('assets/music/music.ogg'))
             pygame.mixer.music.set_volume(0.3)
             self.sounds['click'] = pygame.mixer.Sound(resource_path('assets/sfx/click.wav'))
@@ -121,13 +96,9 @@ class AssetManager:
             self.sounds['correct'] = pygame.mixer.Sound(resource_path('assets/sfx/correct.wav'))
             self.sounds['wrong'] = pygame.mixer.Sound(resource_path('assets/sfx/wrong.wav'))
             self.sounds['level_up'] = pygame.mixer.Sound(resource_path('assets/sfx/level_up.wav'))
-            print("Áudio carregado com sucesso!")
         except pygame.error as e:
-            print(f"Aviso: Não foi possível carregar alguns sons. O jogo funcionará sem eles. Erro: {e}")
+            print(f"Aviso: Não foi possível carregar sons. Erro: {e}")
 
-# =============================================================================
-# --- CLASSES DO JOGO ---
-# =============================================================================
 class SpriteSheet:
     def __init__(self, sheet, grid_width, grid_height):
         self.sheet = sheet
@@ -147,10 +118,9 @@ class Raposinha(pygame.sprite.Sprite):
         self.assets = assets
         self.pet_sheet_handler = SpriteSheet(self.assets.images['spritesheet'], 51, 53)
         self.food_sheet_handler = SpriteSheet(self.assets.images['food_spritesheet'], 16, 16)
-
-        self.animation = [self.pet_sheet_handler.get_sprite(6, col) for col in [0, 1, 2, 3, 4, 5]]
-        self.happy_animation = [self.pet_sheet_handler.get_sprite(7, col) for col in [0, 1]]
-        self.food_icons = self.load_food_icons()
+        self.animation = [self.pet_sheet_handler.get_sprite(6, col) for col in range(6)]
+        self.happy_animation = [self.pet_sheet_handler.get_sprite(7, col) for col in range(2)]
+        self.food_icons = self._load_food_icons()
         self.eating_food = None
         self.eating_timer = 0
         self.level, self.xp, self.xp_to_next_level = 1, 0, XP_PER_LEVEL[0]
@@ -176,20 +146,17 @@ class Raposinha(pygame.sprite.Sprite):
         elif self.current_phrase and now - self.phrase_start_time > 5000:
             self.current_phrase = None
             self.phrase_start_time = now
-        self.update_eating_animation()
-
-    def load_food_icons(self):
-        icons = []
-        sheet_width_in_icons = self.food_sheet_handler.sheet.get_width() // self.food_sheet_handler.grid_width
-        sheet_height_in_icons = self.food_sheet_handler.sheet.get_height() // self.food_sheet_handler.grid_height
-        for row in range(sheet_height_in_icons):
-            for col in range(sheet_width_in_icons):
-                icons.append(self.food_sheet_handler.get_sprite(row, col, scale=2))
-        return icons
-
-    def update_eating_animation(self):
         if self.eating_food and pygame.time.get_ticks() - self.eating_timer > 1500:
             self.eating_food = None
+
+    def _load_food_icons(self):
+        icons = []
+        sheet_w = self.food_sheet_handler.sheet.get_width() // self.food_sheet_handler.grid_width
+        sheet_h = self.food_sheet_handler.sheet.get_height() // self.food_sheet_handler.grid_height
+        for row in range(sheet_h):
+            for col in range(sheet_w):
+                icons.append(self.food_sheet_handler.get_sprite(row, col, scale=2))
+        return icons
 
     def draw_eating_animation(self, screen):
         if self.eating_food:
@@ -247,8 +214,8 @@ class Raposinha(pygame.sprite.Sprite):
         self.xp = data.get('xp', 0)
         self.fome = data.get('fome', 10)
         self.felicidade = data.get('felicidade', 10)
-        if self.level > len(XP_PER_LEVEL): return
-        self.xp_to_next_level = XP_PER_LEVEL[self.level - 1]
+        if self.level <= len(XP_PER_LEVEL):
+            self.xp_to_next_level = XP_PER_LEVEL[self.level - 1]
 
 class Button:
     def __init__(self, x, y, width, height, text, color, hover_color, assets):
@@ -292,8 +259,8 @@ class Particle:
 
     def draw(self, screen):
         size = int(10 * (self.lifespan / 255))
-        if size < 2: return
-        draw_heart_shape(screen, self.color, (self.x, self.y), size)
+        if size > 1:
+            draw_heart_shape(screen, self.color, (self.x, self.y), size)
 
 class Heart:
     def __init__(self):
@@ -312,9 +279,6 @@ class Heart:
     def draw(self, screen):
         draw_heart_shape(screen, self.color, (self.x, self.y), self.size)
 
-# =============================================================================
-# --- MÁQUINA DE ESTADOS DO JOGO (STATE MACHINE) ---
-# =============================================================================
 class GameState:
     def __init__(self, game): self.game = game
     def handle_events(self, events): pass
@@ -334,21 +298,17 @@ class IntroState(GameState):
     def handle_events(self, events):
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.KEYDOWN:
-                # MUDANÇA: Lógica de inicialização de áudio movida para cá
-                # 1. INICIALIZA O SISTEMA DE ÁUDIO
                 if not pygame.mixer.get_init():
+                    print("Inicializando sistema de áudio...")
                     pygame.mixer.init()
-                    # 2. CARREGA TODOS OS SONS E MÚSICA
-                    self.game.assets.load_audio()
-
-                # 3. TOCA A MÚSICA DE FUNDO
+                    self.game.assets.load_audio_assets()
+                
                 if pygame.mixer.get_init() and not pygame.mixer.music.get_busy():
                     try:
                         pygame.mixer.music.play(-1)
                     except pygame.error:
                         print("Não foi possível tocar a música...")
-
-                # 4. FINALMENTE, MUDA PARA A TELA DO JOGO
+                
                 self.game.change_state(PlayingState)
 
     def update(self):
@@ -386,12 +346,9 @@ class PlayingState(GameState):
             for button in self.buttons:
                 if button.is_clicked(event):
                     result = None
-                    if button.text == "Alimentar":
-                        result = self.maya.start_eating()
-                    elif button.text == "Carinho":
-                        result = self.maya.fazer_carinho()
-                    elif button.text == "Quiz":
-                        self.game.change_state(QuizState)
+                    if button.text == "Alimentar": result = self.maya.start_eating()
+                    elif button.text == "Carinho": result = self.maya.fazer_carinho()
+                    elif button.text == "Quiz": self.game.change_state(QuizState)
                     self.handle_action_result(result)
 
     def handle_action_result(self, result):
@@ -432,7 +389,7 @@ class PlayingState(GameState):
     def draw_ui(self, screen):
         self.draw_status_bar(screen, 10, 10, self.label_fome, self.maya.fome, 10, COLORS['red'])
         self.draw_status_bar(screen, 10, 50, self.label_felicidade, self.maya.felicidade, 10, COLORS['blue'])
-        self.draw_status_bar(screen, 10, 90, self.label_xp, self.maya.xp, self.maya.xp_to_next_level, COLORS['xp_color'])
+        self.draw_status_bar(screen, 10, 90, self.label_xp, self.maya.xp, self.xp_to_next_level, COLORS['xp_color'])
         screen.blit(self.level_surf, (SCREEN_WIDTH - self.level_surf.get_width() - 20, 20))
         for button in self.buttons: button.draw(screen)
 
@@ -448,12 +405,29 @@ class PlayingState(GameState):
         pygame.draw.rect(screen, COLORS['black'], border_rect, 2, border_radius=5)
 
     def draw_speech_bubble(self, screen, text, pos):
-        text_surf = self.game.assets.fonts['medium'].render(text, True, COLORS['text'])
+        wrapped_text = textwrap.wrap(text, width=25)
         padding = 10
-        bubble_rect = text_surf.get_rect(center=pos).inflate(padding * 2, padding * 2)
+        
+        # Encontra a maior linha para definir a largura do balão
+        font = self.game.assets.fonts['medium']
+        text_surfaces = [font.render(line, True, COLORS['text']) for line in wrapped_text]
+        max_width = max(surf.get_width() for surf in text_surfaces)
+        total_height = sum(surf.get_height() for surf in text_surfaces)
+
+        bubble_rect = pygame.Rect(0, 0, max_width, total_height)
+        bubble_rect = bubble_rect.inflate(padding * 2, padding * 2)
+        bubble_rect.center = pos
+        
         pygame.draw.rect(screen, COLORS['bubble_bg'], bubble_rect, border_radius=15)
         pygame.draw.rect(screen, COLORS['bubble_border'], bubble_rect, 2, border_radius=15)
-        screen.blit(text_surf, text_surf.get_rect(center=pos))
+        
+        # Desenha cada linha de texto
+        current_y = bubble_rect.top + padding
+        for surf in text_surfaces:
+            text_rect = surf.get_rect(centerx=pos[0], top=current_y)
+            screen.blit(surf, text_rect)
+            current_y += surf.get_height()
+
         tip = (pos[0], pos[1] + bubble_rect.height // 2)
         points = [tip, (tip[0] - 10, tip[1] + 10), (tip[0] + 10, tip[1] + 10)]
         pygame.draw.polygon(screen, COLORS['bubble_bg'], points)
@@ -462,21 +436,20 @@ class PlayingState(GameState):
 class QuizState(GameState):
     def __init__(self, game):
         super().__init__(game)
-        self.maya = self.game.maya
         self.question_data = random.choice(QUIZ_DATA)
         self.question_text = self.question_data["pergunta"]
         self.options = self.question_data["opcoes"]
         self.correct_idx = self.question_data["correta"]
         self.feedback, self.feedback_timer = None, 0
         self.buttons = []
-        self.setup_buttons()
+        self._setup_buttons()
 
     def handle_events(self, events):
         if self.feedback: return
         for event in events:
             for i, button in enumerate(self.buttons):
                 if button.is_clicked(event):
-                    self.process_answer(i)
+                    self._process_answer(i)
                     return
 
     def update(self):
@@ -487,39 +460,39 @@ class QuizState(GameState):
 
     def draw(self, screen):
         screen.blit(self.game.assets.images['background'], (0, 0))
-        screen.blit(self.maya.image, self.maya.rect)
+        screen.blit(self.game.maya.image, self.game.maya.rect)
         wrapped_text = textwrap.wrap(self.question_text, width=35)
         y = 80
         for line in wrapped_text:
             text_surf = self.game.assets.fonts['medium'].render(line, True, COLORS['text'])
             screen.blit(text_surf, text_surf.get_rect(center=(SCREEN_WIDTH // 2, y)))
-            y += 40
+            y += text_surf.get_height()
         for button in self.buttons: button.draw(screen)
 
-    def setup_buttons(self):
+    def _setup_buttons(self):
         btn_w, btn_h, pad = 350, 50, 15
-        start_y = (SCREEN_HEIGHT - (btn_h + pad) * len(self.options)) // 2 + 50
+        total_btn_h = (btn_h + pad) * len(self.options) - pad
+        start_y = (SCREEN_HEIGHT - total_btn_h) / 2 + 60
         for i, opt in enumerate(self.options):
             y = start_y + i * (btn_h + pad)
-            self.buttons.append(
-                Button(SCREEN_WIDTH // 2 - btn_w // 2, y, btn_w, btn_h, opt, COLORS['blue'], COLORS['purple'], self.game.assets))
+            self.buttons.append(Button(SCREEN_WIDTH // 2 - btn_w // 2, y, btn_w, btn_h, opt, COLORS['blue'], COLORS['purple'], self.game.assets))
 
-    def process_answer(self, chosen_index):
+    def _process_answer(self, chosen_index):
         self.feedback_timer = pygame.time.get_ticks()
         result = None
         if chosen_index == self.correct_idx:
             self.feedback = "CORRECT"
             self.buttons[chosen_index].color = COLORS['correct_answer']
             if 'correct' in self.game.assets.sounds: self.game.assets.sounds['correct'].play()
-            self.maya.felicidade = min(10, self.maya.felicidade + 5)
-            result = self.maya.add_xp(50)
+            self.game.maya.felicidade = min(10, self.game.maya.felicidade + 5)
+            result = self.game.maya.add_xp(50)
         else:
             self.feedback = "INCORRECT"
             self.buttons[chosen_index].color = COLORS['incorrect_answer']
             self.buttons[self.correct_idx].color = COLORS['correct_answer']
             if 'wrong' in self.game.assets.sounds: self.game.assets.sounds['wrong'].play()
-            self.maya.felicidade = max(0, self.maya.felicidade - 3)
-            result = self.maya.add_xp(5)
+            self.game.maya.felicidade = max(0, self.game.maya.felicidade - 3)
+            result = self.game.maya.add_xp(5)
         if result:
             self.game.change_state(PlayingState, action_result=result)
 
@@ -527,7 +500,8 @@ class AnniversaryState(GameState):
     def __init__(self, game):
         super().__init__(game)
         self.hearts = [Heart() for _ in range(100)]
-        if os.path.exists(SAVE_FILE): os.remove(SAVE_FILE)
+        save_path = resource_path(SAVE_FILE)
+        if os.path.exists(save_path): os.remove(save_path)
         self.happy_frames = self.game.maya.happy_animation
         self.current_frame = 0
         self.last_update = pygame.time.get_ticks()
@@ -546,10 +520,10 @@ class AnniversaryState(GameState):
         current_happy_image = self.happy_frames[self.current_frame]
         happy_rect = current_happy_image.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 120))
         screen.blit(current_happy_image, happy_rect)
-        self.draw_final_message(screen, "Feliz aniversário de namoro", SCREEN_HEIGHT // 2 - 50)
-        self.draw_final_message(screen, "Meu Squirtle!", SCREEN_HEIGHT // 2 + 40, font_key='medium')
+        self._draw_final_message(screen, "Feliz aniversário de namoro", SCREEN_HEIGHT // 2 - 50)
+        self._draw_final_message(screen, "Meu Squirtle!", SCREEN_HEIGHT // 2 + 40, font_key='medium')
 
-    def draw_final_message(self, screen, text, y_pos, font_key='large'):
+    def _draw_final_message(self, screen, text, y_pos, font_key='large'):
         font = self.game.assets.fonts[font_key]
         text_surf = font.render(text, True, COLORS['white'])
         text_rect = text_surf.get_rect(center=(SCREEN_WIDTH // 2, y_pos))
@@ -557,13 +531,9 @@ class AnniversaryState(GameState):
         pygame.draw.rect(screen, COLORS['final_message_bg'], bg_rect, border_radius=15)
         screen.blit(text_surf, text_rect)
 
-# =============================================================================
-# --- CLASSE PRINCIPAL DO JOGO ---
-# =============================================================================
 class Game:
     def __init__(self):
         pygame.init()
-        # MUDANÇA: mixer.init() removido daqui
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption(GAME_TITLE)
         self.clock = pygame.time.Clock()
@@ -571,6 +541,7 @@ class Game:
         self.maya = Raposinha(self.assets)
         self.load_game()
         self.state_manager = IntroState(self)
+        
     def change_state(self, new_state_class, **kwargs):
         new_state = new_state_class(self)
         self.state_manager = new_state
@@ -579,21 +550,23 @@ class Game:
             new_state.handle_action_result(action_result)
 
     def save_game(self):
-        with open(SAVE_FILE, 'w') as f: json.dump(self.maya.get_save_data(), f)
-        print("Jogo salvo!")
+        try:
+            with open(resource_path(SAVE_FILE), 'w') as f:
+                json.dump(self.maya.get_save_data(), f)
+        except Exception as e:
+            print(f"Erro ao salvar o jogo: {e}")
 
     def load_game(self):
-        if os.path.exists(SAVE_FILE):
+        save_path = resource_path(SAVE_FILE)
+        if os.path.exists(save_path):
             try:
-                with open(SAVE_FILE, 'r') as f:
+                with open(save_path, 'r') as f:
                     data = json.load(f)
                     self.maya.load_save_data(data)
-                print("Progresso carregado!")
-            except (json.JSONDecodeError, KeyError):
-                print("Arquivo de save corrompido. Começando um novo jogo.")
+            except (json.JSONDecodeError, KeyError, FileNotFoundError):
+                print("Arquivo de save corrompido ou não encontrado. Começando novo jogo.")
 
     def run(self):
-        # MUDANÇA: Bloco de tocar música removido daqui
         is_running = True
         while is_running:
             events = pygame.event.get()
@@ -609,14 +582,19 @@ class Game:
         pygame.quit()
         sys.exit()
 
-# =============================================================================
-# --- PONTO DE ENTRADA ---
-# =============================================================================
 async def main():
+    # Define o ícone da janela aqui, antes de iniciar o loop do jogo
+    # Esta abordagem é mais compatível com PyInstaller
+    try:
+        icon_surface = pygame.image.load(resource_path("icon.png"))
+        pygame.display.set_icon(icon_surface)
+    except pygame.error as e:
+        print(f"Não foi possível carregar o ícone: {e}")
+        
     game = Game()
     game.run()
 
 if __name__ == '__main__':
-    # Mantém o asyncio para compatibilidade com a versão web (pygbag)
-    # Para rodar localmente, o asyncio não interfere
+    # O asyncio é mantido para compatibilidade com a versão web (pygbag),
+    # mas não interfere na execução local ou no .exe final.
     asyncio.run(main())
