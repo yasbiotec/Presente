@@ -96,7 +96,7 @@ class AssetManager:
             sys.exit()
 
         try:
-            pygame.mixer.music.load('assets/music/music.mp3')
+            pygame.mixer.music.load('assets/music/music.ogg')
             pygame.mixer.music.set_volume(0.3)
             self.sounds['click'] = pygame.mixer.Sound('assets/sfx/click.wav')
             self.sounds['interact'] = pygame.mixer.Sound('assets/sfx/interact.wav')
